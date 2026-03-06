@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { connectDB } from "../config/db.js";
+import Admin from "../Models/Admin.js";
 import ContactMessage from "../Models/ContactMessage.js";
 import Profile from "../Models/Profile.js";
 import Project from "../Models/Project.js";
@@ -9,11 +10,22 @@ import Testimonial from "../Models/Testimonial.js";
 async function seed() {
   await connectDB();
 
+  // Clear all collections
+  await Admin.deleteMany({});
   await Profile.deleteMany({});
   await ContactMessage.deleteMany({});
   await Project.deleteMany({});
   await Service.deleteMany({});
   await Testimonial.deleteMany({});
+
+  // Seed admin user
+  await Admin.create({
+    username: "samtech-admin",
+    password: "samtech_ticotico",
+    secretSlug: "samtech",
+    role: "admin"
+  });
+  console.log("Admin user created");
 
   await Profile.create({
     name: "SamTech",

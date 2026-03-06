@@ -1,36 +1,34 @@
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-function envReady() {
-  return [
-    process.env.ADMIN_SECRET_SLUG,
-    process.env.ADMIN_USERNAME,
-    process.env.ADMIN_PASSWORD,
-    process.env.JWT_SECRET
-  ].every(Boolean);
-}
+import Admin from "../Models/Admin.js";
 
 export async function createPortalSession(req, res) {
-  if (!envReady()) {
-    return res.status(500).json({ message: "Admin environment variables are not configured." });
-  }
-
-  if (req.params.slug !== process.env.ADMIN_SECRET_SLUG) {
-    return res.status(404).json({ message: "Not found" });
-  }
-
+  const { slug } = req.params;
   const { username, password } = req.body;
-  const usernameMatches = username === process.env.ADMIN_USERNAME;
 
-  const storedPassword = process.env.ADMIN_PASSWORD;
-  const passwordMatches = storedPassword.startsWith("$2")
-    ? await bcrypt.compare(password, storedPassword)
-    : password === storedPassword;
+  try {
+    // Find admin by secret slug
+    const admin = await Admin.findOne({ secretSlug: slug });
 
-  if (!usernameMatches || !passwordMatches) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    if (!admin) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    // Check username
+    if (username !== admin.username) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check password
+    const passwordMatches = await admin.comparePassword(password);
+    if (!passwordMatches) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Generate token
+    const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET, { expiresIn: "8h" });
+    res.json({ token, message: "Session created" });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error" });
   }
-
-  const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET, { expiresIn: "8h" });
-  res.json({ token, message: "Session created" });
 }
