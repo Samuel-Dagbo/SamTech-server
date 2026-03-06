@@ -44,16 +44,16 @@ export function startPingService(serverUrl) {
     return;
   }
 
-  const pingUrl = `${serverUrl}/api/health`;
+  const pingTargetUrl = `${serverUrl}/api/health`;
 
   // Ping immediately on startup
   console.log("🚀 Ping service: Initial ping on startup...");
-  pingUrl(pingUrl, "Initial");
+  pingUrl(pingTargetUrl, "Initial");
 
   // Set up interval to ping every 10 minutes
   pingInterval = setInterval(() => {
     console.log("⏰ Ping service: Scheduled ping to keep server awake...");
-    pingUrl(pingUrl, "Scheduled");
+    pingUrl(pingTargetUrl, "Scheduled");
   }, PING_INTERVAL);
 
   console.log(`✅ Ping service started - will ping every ${PING_INTERVAL / 60000} minutes`);
