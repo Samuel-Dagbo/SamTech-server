@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  cleanupProjects,
   createContactMessage,
   createService,
   createProject,
@@ -30,6 +31,7 @@ router.get("/projects/:slug", getProjectBySlug);
 router.get("/testimonials", getTestimonials);
 router.get("/services", getServices);
 router.post("/messages", createContactMessage);
+router.post("/cleanup-projects", cleanupProjects);
 
 router.put("/profile", requireAdmin, upsertProfile);
 router.get("/messages", requireAdmin, getContactMessages);

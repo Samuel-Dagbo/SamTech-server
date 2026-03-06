@@ -4,6 +4,18 @@ import Project from "../Models/Project.js";
 import Service from "../Models/Service.js";
 import Testimonial from "../Models/Testimonial.js";
 
+function generateSlug(title) {
+  if (!title || typeof title !== 'string') {
+    return `project-${Date.now()}`;
+  }
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `project-${Date.now()}`;
+}
+
 export async function getProfile(_req, res) {
   const profile = await Profile.findOne().sort({ createdAt: -1 });
   res.json({ data: profile });
@@ -23,9 +35,46 @@ export async function getProjects(_req, res) {
   res.json({ data: projects });
 }
 
+export async function cleanupProjects(_req, res) {
+  try {
+    // Find all projects with empty slugs
+    const emptySlugProjects = await Project.find({ $or: [{ slug: "" }, { slug: null }, { slug: { $exists: false } }] });
+    
+    if (emptySlugProjects.length === 0) {
+      return res.json({ message: "No projects with empty slugs found" });
+    }
+    
+    // Update each project with a generated slug
+    for (const project of emptySlugProjects) {
+      const newSlug = generateSlug(project.title);
+      await Project.findByIdAndUpdate(project._id, { slug: newSlug });
+    }
+    
+    res.json({ message: `Updated ${emptySlugProjects.length} projects with generated slugs` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 export async function createProject(req, res) {
-  const project = await Project.create(req.body);
-  res.status(201).json({ data: project, message: "Project created" });
+  try {
+    // Generate slug if not provided or empty
+    const projectData = { ...req.body };
+    if (!projectData.slug || projectData.slug.trim() === '') {
+      projectData.slug = generateSlug(projectData.title);
+    }
+    
+    const project = await Project.create(projectData);
+    res.status(201).json({ data: project, message: "Project created" });
+  } catch (error) {
+    if (error.code === 11000) {
+      // Handle duplicate slug by generating a unique one
+      const uniqueSlug = `${generateSlug(req.body.title)}-${Date.now()}`;
+      const project = await Project.create({ ...req.body, slug: uniqueSlug });
+      return res.status(201).json({ data: project, message: "Project created" });
+    }
+    throw error;
+  }
 }
 
 export async function updateProject(req, res) {
